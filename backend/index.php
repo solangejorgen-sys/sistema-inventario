@@ -9,14 +9,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$host = getenv('DB_HOST');
-$port = getenv('DB_PORT');
-$db = getenv('DB_NAME');
-$user = getenv('DB_USER');
-$password = getenv('DB_PASSWORD');
+$databaseUrl = getenv('DATABASE_URL');
+
+if ($databaseUrl) {
+    $database = parse_url($databaseUrl);
+    $host = $database['host'] ?? 'localhost';
+    $port = $database['port'] ?? 5432;
+    $db = ltrim($database['path'] ?? '', '/');
+    $user = $database['user'] ?? '';
+    $password = $database['pass'] ?? '';
+} else {
+    $host = getenv('DB_HOST') ?: 'localhost';
+    $port = getenv('DB_PORT') ?: 5432;
+    $db = getenv('DB_NAME') ?: 'inventario_db';
+    $user = getenv('DB_USER') ?: 'postgres';
+    $password = getenv('DB_PASSWORD') ?: 'postgres';
+}
 
 $conn = new PDO("pgsql:host=$host;port=$port;dbname=$db", $user, $password);
 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$conn->exec("
+    CREATE TABLE IF NOT EXISTS produtos (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        quantidade INTEGER NOT NULL,
+        preco NUMERIC(10,2) NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+");
 
 $method = $_SERVER['REQUEST_METHOD'];
 
